@@ -1,4 +1,4 @@
-# Gota
+# Water Tracker
 
 Aplicação web para acompanhar a hidratação diária. Criada com React, TypeScript, Vite, Tailwind CSS e Firebase.
 
