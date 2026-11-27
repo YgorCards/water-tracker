@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, Check, ChevronLeft, ChevronRight, Droplet, GlassWater, Settings, Undo2, Trophy } from 'lucide-react'
+import { BarChart3, Check, ChevronLeft, ChevronRight, Droplet, GlassWater, Settings, Undo2, Trophy, X } from 'lucide-react'
 import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth'
 import { auth, db, firebaseEnabled } from './lib/firebase'
@@ -21,14 +21,14 @@ const readRecord = (date: string, goalMl: number): DailyRecord => {
 }
 const formatMl = (amount: number) => amount.toLocaleString('pt-BR')
 
-function Bottle({ progress, goalMl }: { progress: number; goalMl: number }) {
-  const height = Math.min(370, Math.max(250, 220 + goalMl * 0.045))
-  const waterTop = 462 - Math.round(Math.min(progress, 1) * 267)
+function Bottle({ progress }: { progress: number }) {
+  const height = 320
+  const waterTop = 463 - Math.round(Math.min(progress, 1) * 421)
   return <svg viewBox="0 0 240 500" style={{ height: `${height}px`, width: `${height * 0.48}px` }} className="max-w-full drop-shadow-[0_18px_24px_rgba(0,0,0,0.18)]" role="img" aria-label={`Garrafa com ${Math.round(progress * 100)}% da meta diária`}>
-    <defs><clipPath id="bottle-inside"><path d="M80 192h80l24 31v220q0 20-20 20H76q-20 0-20-20V223z" /></clipPath></defs>
+    <defs><clipPath id="bottle-inside"><path d="M94 42h52v44l18 20 24 42q9 16 9 35v260q0 20-20 20H76q-20 0-20-20V183q0-19 9-35l24-42 18-20v-44h-13z" /></clipPath></defs>
     <rect x="83" y="12" width="74" height="28" rx="7" fill="#52647c" />
     <path d="M91 38h58v48l19 22 25 43q10 17 10 40v247q0 35-34 35H71q-34 0-34-35V191q0-23 10-40l25-43 19-22z" fill="#25344a" stroke="#3a4b63" strokeWidth="3" />
-    <rect x="56" y={waterTop} width="128" height="275" fill="#45a8ff" clipPath="url(#bottle-inside)" />
+    <rect x="36" y={waterTop} width="168" height="440" fill="#45a8ff" clipPath="url(#bottle-inside)" />
     <path d="M49 190h20M171 190h20M49 250h14M177 250h14M49 310h20M171 310h20M49 370h14M177 370h14" stroke="#8293a9" strokeWidth="3" strokeLinecap="round" opacity=".55" />
     <path d="M57 211h126" stroke="#87ccff" strokeWidth="3" opacity=".65" />
     <path d="M67 202v204" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" opacity=".13" />
@@ -43,6 +43,7 @@ function App() {
   const [uid, setUid] = useState<string | null>(null)
   const [firebaseReady, setFirebaseReady] = useState(!firebaseEnabled)
   const [notice, setNotice] = useState('')
+  const [completionDismissed, setCompletionDismissed] = useState(false)
   const [amountText, setAmountText] = useState(String(readSettings().bottleMl))
   const [goalText, setGoalText] = useState(String(readSettings().goalMl / 1000))
   const [cupText, setCupText] = useState(String(readSettings().bottleMl))
@@ -51,6 +52,8 @@ function App() {
 
   const progress = Math.min(record.totalMl / Math.max(record.goalMl, 1), 1)
   const remaining = Math.max(record.goalMl - record.totalMl, 0)
+
+  useEffect(() => { if (progress < 1) setCompletionDismissed(false) }, [progress])
 
   useEffect(() => { localStorage.setItem('gota-settings', JSON.stringify(settings)) }, [settings])
   useEffect(() => {
@@ -153,7 +156,7 @@ function App() {
       {tab === 'today' && <>
         <header className="flex items-center justify-between">
           <button onClick={() => setTab('calendar')} aria-label="Ver calendário mensal" className="flex h-14 w-14 items-center justify-center rounded-full border-[5px] border-[#20242d] text-sm font-bold" style={{ background: `conic-gradient(#18c4e8 ${progress * 360}deg, #20242d 0deg)` }}><span className="grid h-10 w-10 place-items-center rounded-full bg-[#080a0e] text-white">{Math.round(progress * 100)}<span className="text-[9px]">%</span></span></button>
-          <span className="text-xs text-slate-500">Meta diária <b className="ml-1 text-slate-300">{formatMl(settings.goalMl)} ml</b></span>
+          <span className="text-sm font-semibold tracking-wide text-slate-300">Water Tracker</span>
         </header>
         <section className="mt-5 rounded-3xl border border-white/[.07] bg-gradient-to-b from-[#151d29] to-[#10151e] px-5 py-5 text-center shadow-[0_16px_40px_rgba(0,0,0,.16)]">
           <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-300/80">Água consumida hoje</p>
@@ -163,18 +166,16 @@ function App() {
           <p className="mt-3 text-sm font-medium text-slate-400">{remaining > 0 ? `Faltam ${formatMl(remaining)} ml · ${Math.round(progress * 100)}% da meta` : 'Meta diária concluída · 100%'}</p>
         </section>
         <section className="flex min-h-[270px] flex-1 items-center justify-center py-1" aria-label="Garrafa com seu progresso">
-          <Bottle progress={progress} goalMl={settings.goalMl} />
+          <Bottle progress={progress} />
         </section>
         <section className="pb-4">
-          <label htmlFor="water-amount" className="mb-2 block text-center text-xs text-slate-400">Quantidade de água que você tomou</label>
           <div className="mx-auto flex max-w-sm items-center gap-2 rounded-2xl border border-white/10 bg-[#121722] p-2">
             <input id="water-amount" type="number" min="1" inputMode="numeric" value={amountText} onChange={event => setAmountText(event.target.value)} aria-label="Quantidade de água em ml" className="min-w-0 flex-1 bg-transparent px-3 py-2 text-center text-xl font-semibold text-white outline-none placeholder:text-slate-600" />
             <span className="text-sm text-slate-500">ml</span>
             <button onClick={addWater} className="flex h-11 items-center gap-2 rounded-xl bg-[#159ec0] px-4 text-sm font-semibold text-white transition hover:bg-[#20b7d8] active:scale-95"><Droplet size={17} /> Adicionar</button>
           </div>
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Último copo: {formatMl(settings.bottleMl)} ml</span>{record.entries.length > 0 && <button onClick={undoLast} className="flex items-center gap-1 text-slate-400"><Undo2 size={13} /> −{formatMl(record.entries[0].amountMl)} ml</button>}</div>
+          {record.entries.length > 0 && <div className="mt-3 flex justify-end text-xs text-slate-500"><button onClick={undoLast} className="flex items-center gap-1 text-slate-400"><Undo2 size={13} /> −{formatMl(record.entries[0].amountMl)} ml</button></div>}
         </section>
-        {progress >= 1 && <section className="mb-4 flex items-center gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-400/[.09] px-4 py-3.5 text-left shadow-[0_8px_24px_rgba(16,185,129,.08)]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-300/15 text-emerald-300"><Trophy size={20} /></span><div><p className="text-sm font-semibold text-emerald-200">Meta diária atingida!</p><p className="mt-0.5 text-xs text-emerald-100/65">Você já bebeu {formatMl(record.totalMl)} ml hoje. Parabéns!</p></div></section>}
       </>}
 
       {tab === 'calendar' && <section className="flex-1 pt-6">
@@ -215,6 +216,7 @@ function App() {
         <button aria-label="Tamanho do copo" onClick={() => setTab('cup')} className={`grid h-12 place-items-center rounded-full transition ${tab === 'cup' ? 'bg-[#30323a] text-[#20c6e8]' : 'text-slate-500'}`}><GlassWater size={22} /></button>
       </nav>
       {notice && <div className="fixed bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 shadow-xl">{notice}</div>}
+      {tab === 'today' && progress >= 1 && !completionDismissed && <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/65 px-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="completion-title"><section className="relative w-full max-w-sm rounded-[2rem] border border-emerald-200/20 bg-[#131d25] px-7 py-9 text-center shadow-[0_24px_80px_rgba(0,0,0,.55)]"><button onClick={() => setCompletionDismissed(true)} aria-label="Fechar" className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-white/5 text-slate-400 hover:bg-white/10"><X size={18} /></button><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-300/15 text-emerald-300"><Trophy size={30} /></span><h2 id="completion-title" className="mt-5 text-2xl font-semibold text-emerald-100">Meta atingida!</h2><p className="mt-2 text-sm leading-6 text-slate-300">Parabéns! Você completou sua meta de {formatMl(record.goalMl)} ml hoje.</p><button onClick={() => setCompletionDismissed(true)} className="mt-6 h-11 w-full rounded-xl bg-emerald-300 font-semibold text-emerald-950 transition hover:bg-emerald-200">Continuar</button></section></div>}
     </div>
   </main>
 }
